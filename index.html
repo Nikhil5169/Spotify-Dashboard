@@ -1,0 +1,97 @@
+// src/components/Auth/Login.js
+import React, { useState } from 'react';
+import { GoogleLogin } from 'react-google-login';
+import authService from '../../services/auth.service';
+
+const Login = () => {
+const [error, setError] = useState('');
+
+    const handleGoogleSuccess = async (response) => {
+        try {
+            const result = await authService.googleLogin(response.tokenId);
+            // Handle successful login
+            console.log(result);
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
+    return (
+        <div className="login-container">
+            <h2>Login</h2>
+            {error && <div className="error">{error}</div>}
+            <GoogleLogin
+                clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}
+                buttonText="Login with Google"
+                onSuccess={handleGoogleSuccess}
+                onFailure={(err) => setError(err.message)}
+                cookiePolicy={'single_host_origin'}
+            />
+        </div>
+    );
+};
+
+export default Login;
+
+// src/components/Dashboard/Dashboard.js
+import React, { useEffect } from 'react';
+import api from '../../services/api';
+import Chart from './Chart';
+import UserProfile from './UserProfile';
+
+const Dashboard = () => {
+    const [userData, setUserData] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await api.get('/user/data');
+                setUserData(response.data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    if (loading) return <div>Loading...</div>;
+
+    return (
+        <div className="dashboard">
+            <UserProfile user={userData} />
+            <Chart data={userData?.chartData} />
+        </div>
+    );
+};
+
+export default Dashboard;
+
+// src/components/Dashboard/Chart.js
+import React from 'react';
+import { Line } from 'react-chartjs-2';
+
+const Chart = ({ data }) => {
+    const chartData = {
+        labels: data?.labels || [],
+        datasets: [
+            {
+                label: 'User Activity',
+                data: data?.values || [],
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }
+        ]
+    };
+
+    return (
+        <div className="chart-container">
+            <Line data={chartData} />
+        </div>
+    );
+};
+
+export default Chart;
